@@ -119,6 +119,29 @@ export class O2Instance {
     }
   }
 
+
+  async queryTraces(sql: string, startMs: number, endMs: number, org?: string): Promise<{ hits: unknown[] }> {
+    const endpoint = `${this.url}/api/${org ?? this.defaultOrg}/_search?type=traces`;
+    const body = {
+      query: {
+        sql,
+        start_time: this.toMicros(startMs),
+        end_time: this.toMicros(endMs),
+        from: 0,
+        size: 500,
+      },
+    };
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Basic ${this.authToken}` },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(this.defaultTimeout),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+    const json = (await response.json()) as { hits?: unknown[] };
+    return { hits: json.hits ?? [] };
+  }
+
   async healthCheck(): Promise<boolean> {
     try {
       const endpoint = `${this.url}/healthz`;

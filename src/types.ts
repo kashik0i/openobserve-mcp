@@ -42,3 +42,33 @@ export type BatchQueryResult = {
   data?: QueryResult;
   error?: string;
 };
+
+export interface TraceSpan {
+  traceId: string;
+  spanId: string;
+  parentSpanId?: string;
+  service: string;
+  operation: string;
+  start: number;      // unix ms
+  durationMs: number;
+  status: "ok" | "error" | "unset";
+  tags: Record<string, string | number | boolean>;
+}
+
+export interface TraceSummary {
+  traceId: string;
+  rootService: string;
+  rootOperation: string;
+  start: number;
+  durationMs: number;
+  spanCount: number;
+  status: "ok" | "error";
+}
+
+export interface ServiceStats {
+  service: string;
+  traceCount: number;
+  errorRate: number;
+  p50Ms: number;
+  p95Ms: number;
+}
