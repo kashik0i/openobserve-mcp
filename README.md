@@ -115,3 +115,55 @@ MCP, Model Context Protocol, OpenObserve, observability, logs, traces, metrics, 
 ## License
 
 MIT © [Adarsh BA](https://github.com/adarshba)
+
+## Extended tools (fork additions)
+
+This fork adds trace-focused tools filling upstream's logs-centric gap.
+
+### Implemented
+
+| Tool | Purpose |
+|---|---|
+| `o2_get_trace_by_id` | Fetch a full distributed trace by ID with all spans grouped by service |
+| `o2_list_services` | List instrumented services with trace counts, error rates, p50/p95 latency |
+| `o2_list_traces` | List trace summaries filtered by service/status/duration |
+
+### Stubs (not implemented — open an issue to request)
+
+| Tool | Planned purpose |
+|---|---|
+| `o2_top_operations` | Top N operations per service by rate / duration / errors |
+| `o2_recent_errors` | Recent error-status traces grouped by service |
+| `o2_promql_query` | PromQL against metrics streams |
+| `o2_list_alerts` | List configured alerts |
+| `o2_list_alert_history` | Alert firing history |
+| `o2_get_alert` | Single alert by ID |
+
+### Claude Code setup
+
+```jsonc
+{
+  "mcpServers": {
+    "openobserve": {
+      "command": "npx",
+      "args": ["-y", "github:kashik0i/openobserve-mcp", "--config", "/abs/path/to/config.json"]
+    }
+  }
+}
+```
+
+See `config/example.json` for the multi-instance config format.
+
+### Running tests
+
+```bash
+pnpm test
+```
+
+Uses Vitest + MSW for HTTP mocking. New tools have test coverage; upstream tools are unchanged and not re-tested by this fork.
+
+### Fork maintenance
+
+- Upstream: [adarshba/openobserve-mcp](https://github.com/adarshba/openobserve-mcp)
+- Sync strategy: pull upstream changes periodically; resolve conflicts in `src/server.ts` (new imports + registrations) and `package.json` (devDependencies)
+- Upstream PRs contributing the trace tools back are welcome.
