@@ -7,6 +7,10 @@ import { BatchQueryInputSchema, createBatchQueryHandler } from "./tools/batch-qu
 import { ListInstancesInputSchema, createListInstancesHandler } from "./tools/list-instances.js";
 import { ListStreamsInputSchema, createListStreamsHandler } from "./tools/list-streams.js";
 import { GetStreamSchemaInputSchema, createGetStreamSchemaHandler } from "./tools/get-stream-schema.js";
+import { GetTraceByIdInputSchema, createGetTraceByIdHandler } from "./tools/get-trace-by-id.js";
+import { ListServicesInputSchema, createListServicesHandler } from "./tools/list-services.js";
+import { ListTracesInputSchema, createListTracesHandler } from "./tools/list-traces.js";
+import { StubInputSchema, createStubHandler, STUB_TOOLS } from "./tools/stubs.js";
 import { initTracing, withTracing } from "./tracing.js";
 
 const MAX_RESPONSE_BYTES = 1024 * 1024;
@@ -39,6 +43,9 @@ export function createServer(config: ResolvedConfig): McpServer {
   const listInstances = withTracing("o2_list_instances", createListInstancesHandler(pool));
   const listStreams = withTracing("o2_list_streams", createListStreamsHandler(pool));
   const getStreamSchema = withTracing("o2_get_stream_schema", createGetStreamSchemaHandler(pool));
+  const getTraceById = withTracing("o2_get_trace_by_id", createGetTraceByIdHandler(pool));
+  const listServices = withTracing("o2_list_services", createListServicesHandler(pool));
+  const listTraces = withTracing("o2_list_traces", createListTracesHandler(pool));
 
   server.registerTool(
     "o2_search_logs",
@@ -109,6 +116,54 @@ export function createServer(config: ResolvedConfig): McpServer {
       return { content: [{ type: "text", text: safeSerialize(result) }] };
     },
   );
+
+  server.registerTool(
+    "o2_get_trace_by_id",
+    {
+      description: "Fetch a single distributed trace by trace_id. Returns all spans grouped and sorted by start time, plus service and duration summary. Use after finding a trace ID via o2_list_traces or logs.",
+      inputSchema: GetTraceByIdInputSchema.shape,
+    },
+    async (args) => {
+      const result = await getTraceById(GetTraceByIdInputSchema.parse(args));
+      return { content: [{ type: "text", text: safeSerialize(result) }] };
+    },
+  );
+
+  server.registerTool(
+    "o2_list_services",
+    {
+      description: "List services instrumented in the trace stream with per-service trace counts, error rates, and p50/p95 latency over a time range. Default range: last 24h.",
+      inputSchema: ListServicesInputSchema.shape,
+    },
+    async (args) => {
+      const result = await listServices(ListServicesInputSchema.parse(args));
+      return { content: [{ type: "text", text: safeSerialize(result) }] };
+    },
+  );
+
+  server.registerTool(
+    "o2_list_traces",
+    {
+      description: "List trace summaries matching filters (service, status, min duration). Returns trace IDs + metadata sorted by start desc. Default range: last 1h, limit 50. Use status='error' to find failing requests.",
+      inputSchema: ListTracesInputSchema.shape,
+    },
+    async (args) => {
+      const result = await listTraces(ListTracesInputSchema.parse(args));
+      return { content: [{ type: "text", text: safeSerialize(result) }] };
+    },
+  );
+
+  for (const stub of STUB_TOOLS) {
+    const handler = createStubHandler(stub.name);
+    server.registerTool(
+      stub.name,
+      { description: stub.description, inputSchema: StubInputSchema.shape },
+      async (args) => {
+        const result = await handler(StubInputSchema.parse(args));
+        return { content: [{ type: "text", text: safeSerialize(result) }] };
+      },
+    );
+  }
 
   return server;
 }
